@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FindIt — Lost & Found</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --ink: #1a1814; --ink-light: #6b6760; --ink-faint: #c8c6c0;
+  --paper: #faf8f4; --paper-warm: #f2ede4; --paper-card: #ffffff;
+  --accent: #d4522a; --accent-light: #fdf1ec; --accent-muted: #e8845f;
+  --teal: #1a7a6a; --teal-light: #e3f5f1;
+  --border: rgba(26,24,20,0.1); --border-med: rgba(26,24,20,0.18);
+  --radius-sm: 6px; --radius-md: 12px; --radius-lg: 18px;
+  --shadow-card: 0 2px 12px rgba(0,0,0,0.06),0 1px 3px rgba(0,0,0,0.04);
+  --shadow-hover: 0 8px 28px rgba(0,0,0,0.1),0 2px 8px rgba(0,0,0,0.06);
+  --font-display: 'DM Serif Display',serif; --font-body: 'DM Sans',sans-serif;
+}
+body { font-family: var(--font-body); background: var(--paper); color: var(--ink); min-height: 100vh; overflow-x: hidden; }
+
+/* ── AUTH SCREEN ── */
+#authScreen {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  background: var(--ink); position: relative; overflow: hidden;
+}
+#authScreen::before {
+  content: ''; position: absolute; inset: 0;
+  background: repeating-linear-gradient(-45deg,transparent,transparent 60px,rgba(255,255,255,0.015) 60px,rgba(255,255,255,0.015) 61px);
+}
+.auth-card {
+  background: var(--paper-card); border-radius: var(--radius-lg);
+  width: 100%; max-width: 420px; padding: 40px; position: relative; z-index: 1;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.35);
+}
+.auth-logo { font-family: var(--font-display); font-size: 2rem; color: var(--ink); letter-spacing: -0.5px; text-align: center; margin-bottom: 6px; }
+.auth-logo span { color: var(--accent); }
+.auth-sub { text-align: center; font-size: 0.85rem; color: var(--ink-light); margin-bottom: 28px; }
+.auth-tabs { display: grid; grid-template-columns: 1fr 1fr; border: 1.5px solid var(--border-med); border-radius: var(--radius-sm); overflow: hidden; margin-bottom: 24px; }
+.auth-tab { padding: 9px; font-family: var(--font-body); font-size: 0.85rem; font-weight: 500; border: none; background: transparent; cursor: pointer; color: var(--ink-light); transition: all 0.15s; }
+.auth-tab.active { background: var(--ink); color: white; }
+.auth-form { display: flex; flex-direction: column; gap: 14px; }
+.auth-input-wrap { display: flex; flex-direction: column; gap: 5px; }
+.auth-label { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-light); }
+.auth-input {
+  padding: 10px 14px; font-family: var(--font-body); font-size: 0.9rem;
+  color: var(--ink); background: var(--paper); border: 1.5px solid var(--border-med);
+  border-radius: var(--radius-sm); outline: none; transition: border-color 0.15s;
+}
+.auth-input:focus { border-color: var(--accent); background: white; }
+.auth-btn {
+  width: 100%; padding: 12px; background: var(--accent); color: white;
+  border: none; border-radius: var(--radius-sm); font-family: var(--font-body);
+  font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: background 0.2s;
+  margin-top: 4px;
+}
+.auth-btn:hover { background: #b8441f; }
+.auth-err { font-size: 0.8rem; color: #a32d2d; background: #fceaea; border-radius: var(--radius-sm); padding: 8px 12px; display: none; }
+.auth-divider { display: flex; align-items: center; gap: 12px; margin: 4px 0; color: var(--ink-faint); font-size: 0.78rem; }
+.auth-divider::before,.auth-divider::after { content:''; flex:1; height:1px; background: var(--border); }
+.demo-accounts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.demo-btn {
+  padding: 8px; border: 1.5px solid var(--border-med); border-radius: var(--radius-sm);
+  background: var(--paper); font-family: var(--font-body); font-size: 0.78rem;
+  cursor: pointer; color: var(--ink-light); transition: all 0.15s; text-align: left;
+}
+.demo-btn:hover { background: var(--paper-warm); color: var(--ink); border-color: var(--accent); }
+.demo-btn strong { display: block; color: var(--ink); font-size: 0.82rem; }
+
+/* ── APP ── */
+#app { display: none; }
+
+/* ── NAV ── */
+nav {
+  background: var(--paper-card); border-bottom: 1px solid var(--border);
+  padding: 0 2rem; height: 64px; display: flex; align-items: center;
+  justify-content: space-between; position: sticky; top: 0; z-index: 100;
+}
+.logo { font-family: var(--font-display); font-size: 1.5rem; color: var(--ink); letter-spacing: -0.5px; }
+.logo span { color: var(--accent); }
+.nav-actions { display: flex; gap: 10px; align-items: center; }
+.nav-user {
+  display: flex; align-items: center; gap: 9px;
+  padding: 5px 12px 5px 5px; border-radius: 100px;
+  border: 1px solid var(--border-med); cursor: pointer; transition: background 0.15s;
+}
+.nav-user:hover { background: var(--paper-warm); }
+.nav-avatar {
+  width: 30px; height: 30px; border-radius: 50%; background: var(--accent);
+  color: white; font-size: 0.8rem; font-weight: 600;
+  display: flex; align-items: center; justify-content: center;
+}
+.nav-username { font-size: 0.85rem; font-weight: 500; }
+.btn {
+  font-family: var(--font-body); font-size: 0.875rem; font-weight: 500;
+  border-radius: var(--radius-sm); padding: 8px 18px; cursor: pointer;
+  transition: all 0.18s ease; border: none;
+  display: inline-flex; align-items: center; gap: 7px; text-decoration: none;
+}
+.btn-ghost { background: transparent; color: var(--ink-light); border: 1px solid var(--border-med); }
+.btn-ghost:hover { background: var(--paper-warm); color: var(--ink); }
+.btn-primary { background: var(--accent); color: white; }
+.btn-primary:hover { background: #b8441f; transform: translateY(-1px); }
+.btn-danger { background: #fcebeb; color: #a32d2d; border: 1px solid rgba(162,45,45,0.2); }
+.btn-danger:hover { background: #a32d2d; color: white; }
+.btn-teal { background: var(--teal-light); color: var(--teal); border: 1px solid rgba(26,122,106,0.2); }
+.btn-teal:hover { background: var(--teal); color: white; }
+
+/* ── HERO ── */
+.hero { background: var(--ink); padding: 72px 2rem 64px; text-align: center; position: relative; overflow: hidden; }
+.hero::before { content:''; position:absolute; inset:0; background:repeating-linear-gradient(-45deg,transparent,transparent 60px,rgba(255,255,255,0.015) 60px,rgba(255,255,255,0.015) 61px); }
+.hero-tag { display:inline-flex; align-items:center; gap:6px; background:rgba(212,82,42,0.2); color:#f09070; font-size:0.75rem; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; padding:5px 14px; border-radius:100px; border:1px solid rgba(212,82,42,0.3); margin-bottom:20px; }
+.hero h1 { font-family:var(--font-display); font-size:clamp(2.2rem,5vw,3.8rem); color:#f5f2ed; line-height:1.1; letter-spacing:-1px; margin-bottom:16px; }
+.hero h1 em { color:var(--accent-muted); font-style:italic; }
+.hero p { color:rgba(245,242,237,0.55); font-size:1rem; font-weight:300; max-width:460px; margin:0 auto 36px; line-height:1.65; }
+.search-wrap { max-width:560px; margin:0 auto; position:relative; }
+.search-wrap input { width:100%; height:52px; padding:0 52px 0 20px; font-family:var(--font-body); font-size:0.95rem; border:1px solid rgba(255,255,255,0.12); background:rgba(255,255,255,0.08); color:#f5f2ed; border-radius:var(--radius-md); outline:none; transition:all 0.2s; }
+.search-wrap input::placeholder { color:rgba(245,242,237,0.35); }
+.search-wrap input:focus { background:rgba(255,255,255,0.12); border-color:rgba(255,255,255,0.25); }
+.search-wrap button { position:absolute; right:6px; top:6px; height:40px; width:40px; background:var(--accent); color:white; border:none; border-radius:var(--radius-sm); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:0.9rem; transition:background 0.2s; }
+.search-wrap button:hover { background:#b8441f; }
+
+/* ── STATS ── */
+.stats-bar { background:var(--paper-warm); border-bottom:1px solid var(--border); padding:14px 2rem; display:flex; align-items:center; justify-content:center; gap:32px; flex-wrap:wrap; }
+.stat { display:flex; align-items:center; gap:8px; font-size:0.82rem; color:var(--ink-light); }
+.stat strong { color:var(--ink); font-weight:600; font-size:0.9rem; }
+.stat-dot { width:7px; height:7px; border-radius:50%; }
+.dot-red { background:#e24b4a; } .dot-green { background:#3B6D11; } .dot-amber { background:#ba7517; }
+
+/* ── MAIN LAYOUT ── */
+.main { max-width:1180px; margin:0 auto; padding:2.5rem 2rem; display:grid; grid-template-columns:240px 1fr; gap:2rem; align-items:start; }
+.sidebar { position:sticky; top:80px; }
+.sidebar-section { margin-bottom:1.5rem; }
+.sidebar-label { font-size:0.7rem; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:var(--ink-faint); margin-bottom:10px; }
+.filter-group { display:flex; flex-direction:column; gap:4px; }
+.filter-chip { display:flex; align-items:center; gap:9px; padding:8px 12px; border-radius:var(--radius-sm); font-size:0.875rem; color:var(--ink-light); cursor:pointer; transition:all 0.15s; border:none; background:none; text-align:left; font-family:var(--font-body); }
+.filter-chip:hover { background:var(--paper-warm); color:var(--ink); }
+.filter-chip.active { background:var(--accent-light); color:var(--accent); font-weight:500; }
+.filter-chip .chip-count { margin-left:auto; font-size:0.75rem; background:var(--paper-warm); color:var(--ink-light); padding:1px 7px; border-radius:100px; }
+.filter-chip.active .chip-count { background:rgba(212,82,42,0.12); color:var(--accent); }
+.filter-chip i { font-size:0.9rem; width:16px; }
+
+/* ── ITEMS ── */
+.items-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:1.25rem; flex-wrap:wrap; gap:12px; }
+.items-header h2 { font-size:1rem; font-weight:500; color:var(--ink-light); }
+.items-header h2 strong { color:var(--ink); }
+.sort-select { font-family:var(--font-body); font-size:0.82rem; color:var(--ink); border:1px solid var(--border-med); background:var(--paper-card); padding:6px 30px 6px 10px; border-radius:var(--radius-sm); cursor:pointer; appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b6760'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; outline:none; }
+.items-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:1.25rem; }
+
+/* ── CARD ── */
+.item-card { background:var(--paper-card); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; box-shadow:var(--shadow-card); transition:all 0.22s ease; cursor:pointer; animation:fadeUp 0.3s ease both; }
+.item-card:hover { box-shadow:var(--shadow-hover); transform:translateY(-3px); border-color:var(--border-med); }
+@keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+.card-img { width:100%; aspect-ratio:4/3; object-fit:cover; display:block; }
+.card-img-placeholder { width:100%; aspect-ratio:4/3; background:var(--paper-warm); display:flex; align-items:center; justify-content:center; font-size:2.5rem; color:var(--ink-faint); }
+.card-body { padding:14px 16px 16px; }
+.card-meta { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+.card-status { font-size:0.7rem; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; padding:3px 9px; border-radius:100px; }
+.status-lost { background:#fceaea; color:#a32d2d; }
+.status-found { background:#eaf3de; color:#3B6D11; }
+.card-date { font-size:0.75rem; color:var(--ink-faint); }
+.card-title { font-size:0.95rem; font-weight:600; color:var(--ink); margin-bottom:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.card-desc { font-size:0.8rem; color:var(--ink-light); line-height:1.5; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; margin-bottom:12px; }
+.card-footer { display:flex; align-items:center; justify-content:space-between; padding-top:12px; border-top:1px solid var(--border); }
+.card-location { font-size:0.75rem; color:var(--ink-light); display:flex; align-items:center; gap:5px; }
+.card-mine-badge { font-size:0.7rem; background:rgba(26,122,106,0.1); color:var(--teal); padding:2px 8px; border-radius:100px; font-weight:600; }
+.card-contact-btn { font-size:0.75rem; font-weight:500; color:var(--accent); background:var(--accent-light); border:none; padding:5px 12px; border-radius:var(--radius-sm); cursor:pointer; font-family:var(--font-body); transition:all 0.15s; }
+.card-contact-btn:hover { background:var(--accent); color:white; }
+
+/* ── MODAL ── */
+.modal-overlay { display:none; position:fixed; inset:0; background:rgba(26,24,20,0.5); z-index:999; backdrop-filter:blur(4px); align-items:flex-start; justify-content:center; padding:2rem 1rem; overflow-y:auto; }
+.modal-overlay.open { display:flex; }
+.modal { background:var(--paper-card); border-radius:var(--radius-lg); width:100%; max-width:560px; box-shadow:0 24px 60px rgba(0,0,0,0.2); animation:slideIn 0.25s ease; margin:auto; }
+@keyframes slideIn { from{opacity:0;transform:translateY(-20px)} to{opacity:1;transform:translateY(0)} }
+.modal-header { display:flex; align-items:center; justify-content:space-between; padding:20px 24px; border-bottom:1px solid var(--border); }
+.modal-header h3 { font-family:var(--font-display); font-size:1.25rem; }
+.modal-close { width:32px; height:32px; border-radius:50%; border:1px solid var(--border-med); background:none; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:0.85rem; color:var(--ink-light); transition:all 0.15s; }
+.modal-close:hover { background:var(--paper-warm); color:var(--ink); }
+.modal-body { padding:24px; }
+.modal-footer { padding:16px 24px; border-top:1px solid var(--border); display:flex; gap:10px; justify-content:flex-end; }
+
+/* ── FORM ── */
+.form-row { margin-bottom:18px; }
+.form-label { display:block; font-size:0.8rem; font-weight:500; color:var(--ink-light); margin-bottom:7px; text-transform:uppercase; letter-spacing:0.05em; }
+.form-label .req { color:var(--accent); }
+.form-input,.form-select,.form-textarea { width:100%; padding:10px 14px; font-family:var(--font-body); font-size:0.9rem; color:var(--ink); background:var(--paper); border:1.5px solid var(--border-med); border-radius:var(--radius-sm); outline:none; transition:border-color 0.15s; }
+.form-input:focus,.form-select:focus,.form-textarea:focus { border-color:var(--accent); background:white; }
+.form-textarea { min-height:90px; resize:vertical; }
+.form-row-2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.type-toggle { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.type-btn { padding:12px; border:2px solid var(--border-med); border-radius:var(--radius-md); background:none; cursor:pointer; font-family:var(--font-body); font-size:0.9rem; font-weight:500; color:var(--ink-light); display:flex; align-items:center; justify-content:center; gap:8px; transition:all 0.15s; }
+.type-btn.active-lost { border-color:#e24b4a; background:#fcebeb; color:#a32d2d; }
+.type-btn.active-found { border-color:#3B6D11; background:#eaf3de; color:#3B6D11; }
+
+/* ── UPLOAD ── */
+.upload-area { border:2px dashed var(--border-med); border-radius:var(--radius-md); padding:28px 20px; text-align:center; cursor:pointer; transition:all 0.2s; background:var(--paper); position:relative; }
+.upload-area:hover,.upload-area.drag-over { border-color:var(--accent); background:var(--accent-light); }
+.upload-area input[type="file"] { position:absolute; inset:0; opacity:0; cursor:pointer; }
+.upload-icon { font-size:2rem; color:var(--ink-faint); margin-bottom:10px; }
+.upload-area p { font-size:0.85rem; color:var(--ink-light); line-height:1.5; }
+.upload-area strong { color:var(--accent); }
+.upload-preview { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:12px; }
+.preview-thumb { aspect-ratio:1; border-radius:var(--radius-sm); object-fit:cover; border:1px solid var(--border); }
+
+/* ── DETAIL ── */
+.detail-img { width:100%; aspect-ratio:16/9; object-fit:cover; border-radius:var(--radius-md); margin-bottom:16px; }
+.detail-img-placeholder { width:100%; aspect-ratio:16/9; background:var(--paper-warm); border-radius:var(--radius-md); display:flex; align-items:center; justify-content:center; font-size:4rem; color:var(--ink-faint); margin-bottom:16px; }
+.detail-tags { display:flex; gap:8px; flex-wrap:wrap; margin:12px 0; }
+.detail-tag { font-size:0.75rem; padding:4px 10px; border-radius:100px; background:var(--paper-warm); color:var(--ink-light); display:flex; align-items:center; gap:5px; }
+.detail-section { margin-bottom:16px; }
+.detail-section-label { font-size:0.7rem; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:var(--ink-faint); margin-bottom:5px; }
+.detail-section p { font-size:0.9rem; color:var(--ink); line-height:1.6; }
+.detail-actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; }
+
+/* ── CHAT PANEL ── */
+.chat-modal { max-width:680px; }
+.chat-header-info { display:flex; align-items:center; gap:12px; flex:1; }
+.chat-item-thumb { width:44px; height:44px; border-radius:var(--radius-sm); object-fit:cover; background:var(--paper-warm); display:flex; align-items:center; justify-content:center; font-size:1.4rem; flex-shrink:0; overflow:hidden; }
+.chat-item-thumb img { width:100%; height:100%; object-fit:cover; }
+.chat-item-meta strong { font-size:0.9rem; display:block; }
+.chat-item-meta span { font-size:0.78rem; color:var(--ink-light); }
+.chat-window { height:340px; overflow-y:auto; padding:16px; background:var(--paper); border-radius:var(--radius-md); border:1px solid var(--border); display:flex; flex-direction:column; gap:10px; margin-bottom:14px; }
+.chat-window::-webkit-scrollbar { width:4px; }
+.chat-window::-webkit-scrollbar-thumb { background:var(--ink-faint); border-radius:4px; }
+.msg-row { display:flex; gap:8px; align-items:flex-end; }
+.msg-row.mine { flex-direction:row-reverse; }
+.msg-avatar { width:28px; height:28px; border-radius:50%; background:var(--accent); color:white; font-size:0.7rem; font-weight:600; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.msg-avatar.other { background:var(--teal); }
+.msg-bubble { max-width:72%; padding:9px 13px; border-radius:var(--radius-md); font-size:0.85rem; line-height:1.5; }
+.msg-row.mine .msg-bubble { background:var(--accent); color:white; border-bottom-right-radius:4px; }
+.msg-row:not(.mine) .msg-bubble { background:var(--paper-card); color:var(--ink); border:1px solid var(--border); border-bottom-left-radius:4px; }
+.msg-time { font-size:0.68rem; color:var(--ink-faint); margin-top:2px; text-align:right; }
+.msg-row:not(.mine) .msg-time { text-align:left; }
+.msg-sender { font-size:0.7rem; font-weight:600; color:var(--ink-faint); margin-bottom:3px; }
+.chat-input-row { display:flex; gap:8px; }
+.chat-input { flex:1; padding:10px 14px; font-family:var(--font-body); font-size:0.875rem; border:1.5px solid var(--border-med); border-radius:var(--radius-md); outline:none; background:white; transition:border-color 0.15s; }
+.chat-input:focus { border-color:var(--accent); }
+.chat-send-btn { width:42px; height:42px; background:var(--accent); color:white; border:none; border-radius:var(--radius-md); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:0.9rem; transition:background 0.2s; flex-shrink:0; }
+.chat-send-btn:hover { background:#b8441f; }
+.chat-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; color:var(--ink-faint); font-size:0.85rem; gap:8px; }
+.chat-empty i { font-size:1.8rem; }
+.resolve-banner { background:#eaf3de; border:1px solid rgba(59,109,17,0.2); border-radius:var(--radius-md); padding:12px 16px; display:flex; align-items:center; gap:10px; margin-bottom:12px; font-size:0.85rem; color:#3B6D11; }
+.resolve-banner i { font-size:1.1rem; }
+
+/* ── CONFIRM DIALOG ── */
+.confirm-box { text-align:center; padding:8px 0; }
+.confirm-box i { font-size:2.5rem; margin-bottom:14px; display:block; }
+.confirm-box h4 { font-size:1.05rem; font-weight:600; margin-bottom:8px; }
+.confirm-box p { font-size:0.875rem; color:var(--ink-light); line-height:1.5; }
+.confirm-actions { display:flex; gap:10px; justify-content:center; margin-top:20px; }
+
+/* ── TOAST ── */
+.toast { position:fixed; bottom:24px; right:24px; background:var(--ink); color:#f5f2ed; padding:12px 20px; border-radius:var(--radius-md); font-size:0.875rem; font-weight:500; display:flex; align-items:center; gap:10px; box-shadow:0 8px 24px rgba(0,0,0,0.2); z-index:9999; transform:translateY(80px); opacity:0; transition:all 0.3s ease; }
+.toast.show { transform:translateY(0); opacity:1; }
+
+/* ── CHAT BADGE ── */
+.chat-badge { position:relative; }
+.unread-dot { position:absolute; top:-2px; right:-2px; width:8px; height:8px; background:#e24b4a; border-radius:50%; border:2px solid var(--paper-card); display:none; }
+.unread-dot.show { display:block; }
+
+/* ── EMPTY STATE ── */
+.empty-state { text-align:center; padding:60px 20px; color:var(--ink-light); grid-column:1/-1; }
+.empty-state i { font-size:2.5rem; color:var(--ink-faint); margin-bottom:16px; display:block; }
+
+/* ── RESPONSIVE ── */
+@media (max-width:860px) {
+  .main { grid-template-columns:1fr; }
+  .sidebar { position:static; display:flex; gap:12px; flex-wrap:wrap; }
+  .sidebar-section { margin-bottom:0; }
+  .sidebar-label { display:none; }
+  .filter-group { flex-direction:row; flex-wrap:wrap; }
+  .filter-chip { font-size:0.8rem; padding:6px 10px; }
+}
+@media (max-width:540px) {
+  nav { padding:0 1rem; }
+  .hero { padding:48px 1rem 44px; }
+  .main { padding:1.5rem 1rem; }
+  .form-row-2 { grid-template-columns:1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- ══ AUTH SCREEN ══ -->
+<div id="authScreen">
+  <div class="auth-card">
+    <div class="auth-logo">Find<span>It</span></div>
+    <div class="auth-sub">Community Lost &amp; Found Platform</div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Sign In</button>
+      <button class="auth-tab" id="tabRegister" onclick="switchAuthTab('register')">Create Account</button>
+    </div>
+    <div id="loginForm" class="auth-form">
+      <div class="auth-input-wrap">
+        <label class="auth-label">Email</label>
+        <input class="auth-input" type="email" id="loginEmail" placeholder="you@email.com">
+      </div>
+      <div class="auth-input-wrap">
+        <label class="auth-label">Password</label>
+        <input class="auth-input" type="password" id="loginPass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <div class="auth-err" id="loginErr"></div>
+      <button class="auth-btn" onclick="doLogin()">Sign In</button>
+    </div>
+    <div id="registerForm" class="auth-form" style="display:none">
+      <div class="auth-input-wrap">
+        <label class="auth-label">Full Name</label>
+        <input class="auth-input" type="text" id="regName" placeholder="Your name">
+      </div>
+      <div class="auth-input-wrap">
+        <label class="auth-label">Email</label>
+        <input class="auth-input" type="email" id="regEmail" placeholder="you@email.com">
+      </div>
+      <div class="auth-input-wrap">
+        <label class="auth-label">Password</label>
+        <input class="auth-input" type="password" id="regPass" placeholder="Min 6 characters" onkeydown="if(event.key==='Enter')doRegister()">
+      </div>
+      <div class="auth-err" id="registerErr"></div>
+      <button class="auth-btn" onclick="doRegister()">Create Account</button>
+    </div>
+    <div class="auth-divider">or try a demo account</div>
+    <div class="demo-accounts">
+      <button class="demo-btn" onclick="quickLogin('alice@demo.com','demo123')">
+        <strong>Alice (Reporter)</strong>alice@demo.com
+      </button>
+      <button class="demo-btn" onclick="quickLogin('bob@demo.com','demo123')">
+        <strong>Bob (Finder)</strong>bob@demo.com
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ APP ══ -->
+<div id="app">
+
+<!-- NAV -->
+<nav>
+  <div class="logo">Find<span>It</span></div>
+  <div class="nav-actions">
+    <button class="btn btn-ghost chat-badge" id="myChatsBtn" onclick="openMyChats()" title="My Chats">
+      <i class="fa-solid fa-comments"></i> Chats
+      <span class="unread-dot" id="unreadDot"></span>
+    </button>
+    <button class="btn btn-ghost" onclick="openModal('uploadModal')">
+      <i class="fa-solid fa-plus"></i> Report Item
+    </button>
+    <div class="nav-user" onclick="showLogoutMenu()">
+      <div class="nav-avatar" id="navAvatar">?</div>
+      <span class="nav-username" id="navUsername">User</span>
+      <i class="fa-solid fa-chevron-down" style="font-size:0.7rem;color:var(--ink-light)"></i>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-tag"><i class="fa-solid fa-circle-dot"></i> Community Lost &amp; Found</div>
+  <h1>Lost something? <em>Found</em> something?<br>We'll help reunite them.</h1>
+  <p>Browse lost &amp; found items reported by your community. Chat with reporters and resolve cases together.</p>
+  <div class="search-wrap">
+    <input type="text" id="heroSearch" placeholder="Search by item, location, or category…" oninput="handleSearch(this.value)">
+    <button><i class="fa-solid fa-magnifying-glass"></i></button>
+  </div>
+</section>
+
+<!-- STATS -->
+<div class="stats-bar">
+  <div class="stat"><span class="stat-dot dot-red"></span><strong id="statLost">0</strong> Lost items</div>
+  <div class="stat"><span class="stat-dot dot-green"></span><strong id="statFound">0</strong> Found items</div>
+  <div class="stat"><span class="stat-dot dot-amber"></span><strong id="statTotal">0</strong> Total reports</div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Status</div>
+      <div class="filter-group">
+        <button class="filter-chip active" onclick="setFilter('status','all',this)"><i class="fa-solid fa-layer-group"></i>All<span class="chip-count" id="countAll">0</span></button>
+        <button class="filter-chip" onclick="setFilter('status','lost',this)"><i class="fa-solid fa-circle-exclamation"></i>Lost<span class="chip-count" id="countLost">0</span></button>
+        <button class="filter-chip" onclick="setFilter('status','found',this)"><i class="fa-solid fa-circle-check"></i>Found<span class="chip-count" id="countFound">0</span></button>
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Category</div>
+      <div class="filter-group">
+        <button class="filter-chip active" onclick="setFilter('category','all',this)"><i class="fa-solid fa-border-all"></i>All</button>
+        <button class="filter-chip" onclick="setFilter('category','electronics',this)"><i class="fa-solid fa-laptop"></i>Electronics</button>
+        <button class="filter-chip" onclick="setFilter('category','accessories',this)"><i class="fa-solid fa-watch"></i>Accessories</button>
+        <button class="filter-chip" onclick="setFilter('category','documents',this)"><i class="fa-solid fa-id-card"></i>Documents</button>
+        <button class="filter-chip" onclick="setFilter('category','bags',this)"><i class="fa-solid fa-bag-shopping"></i>Bags</button>
+        <button class="filter-chip" onclick="setFilter('category','keys',this)"><i class="fa-solid fa-key"></i>Keys</button>
+        <button class="filter-chip" onclick="setFilter('category','pets',this)"><i class="fa-solid fa-paw"></i>Pets</button>
+        <button class="filter-chip" onclick="setFilter('category','other',this)"><i class="fa-solid fa-ellipsis"></i>Other</button>
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">My Items</div>
+      <div class="filter-group">
+        <button class="filter-chip" onclick="setFilter('mine','all',this)" id="filterMine"><i class="fa-solid fa-user"></i>My Reports</button>
+      </div>
+    </div>
+  </aside>
+  <main>
+    <div class="items-header">
+      <h2><strong id="countLabel">0 items</strong> found</h2>
+      <select class="sort-select" onchange="sortItems(this.value)">
+        <option value="newest">Newest first</option>
+        <option value="oldest">Oldest first</option>
+        <option value="az">A → Z</option>
+      </select>
+    </div>
+    <div class="items-grid" id="itemsGrid"></div>
+  </main>
+</div>
+</div><!-- /app -->
+
+<!-- ══ MODALS ══ -->
+
+<!-- UPLOAD -->
+<div class="modal-overlay" id="uploadModal" onclick="handleOverlayClick(event,'uploadModal')">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Report an Item</h3>
+      <button class="modal-close" onclick="closeModal('uploadModal')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label class="form-label">Item Type <span class="req">*</span></label>
+        <div class="type-toggle">
+          <button class="type-btn active-lost" id="typeLost" onclick="selectType('lost')"><i class="fa-solid fa-circle-exclamation"></i>Lost Item</button>
+          <button class="type-btn" id="typeFound" onclick="selectType('found')"><i class="fa-solid fa-circle-check"></i>Found Item</button>
+        </div>
+      </div>
+      <div class="form-row-2">
+        <div class="form-row" style="margin-bottom:0">
+          <label class="form-label">Item Name <span class="req">*</span></label>
+          <input type="text" class="form-input" id="itemName" placeholder="e.g. Black Wallet">
+        </div>
+        <div class="form-row" style="margin-bottom:0">
+          <label class="form-label">Category <span class="req">*</span></label>
+          <select class="form-select" id="itemCategory">
+            <option value="">Select…</option>
+            <option value="electronics">Electronics</option>
+            <option value="accessories">Accessories</option>
+            <option value="documents">Documents</option>
+            <option value="bags">Bags</option>
+            <option value="keys">Keys</option>
+            <option value="pets">Pets</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Description <span class="req">*</span></label>
+        <textarea class="form-textarea" id="itemDesc" placeholder="Color, brand, identifying features…"></textarea>
+      </div>
+      <div class="form-row-2">
+        <div class="form-row" style="margin-bottom:0">
+          <label class="form-label">Location <span class="req">*</span></label>
+          <input type="text" class="form-input" id="itemLocation" placeholder="Where lost/found">
+        </div>
+        <div class="form-row" style="margin-bottom:0">
+          <label class="form-label">Date</label>
+          <input type="date" class="form-input" id="itemDate">
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Photo</label>
+        <div class="upload-area" id="uploadArea">
+          <input type="file" accept="image/*" id="photoInput" onchange="handlePhotoSelect(event)" multiple>
+          <div class="upload-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+          <p><strong>Click to upload</strong> or drag &amp; drop</p>
+          <div class="upload-preview" id="uploadPreview"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('uploadModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="submitItem()"><i class="fa-solid fa-paper-plane"></i>Post Report</button>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL -->
+<div class="modal-overlay" id="detailModal" onclick="handleOverlayClick(event,'detailModal')">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="detailTitle">Item Details</h3>
+      <button class="modal-close" onclick="closeModal('detailModal')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="modal-body" id="detailBody"></div>
+  </div>
+</div>
+
+<!-- CHAT -->
+<div class="modal-overlay" id="chatModal" onclick="handleOverlayClick(event,'chatModal')">
+  <div class="modal chat-modal">
+    <div class="modal-header">
+      <div class="chat-header-info">
+        <div class="chat-item-thumb" id="chatThumb"></div>
+        <div class="chat-item-meta">
+          <strong id="chatItemTitle">—</strong>
+          <span id="chatWith">—</span>
+        </div>
+      </div>
+      <button class="modal-close" onclick="closeModal('chatModal')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="modal-body">
+      <div id="resolveBanner" class="resolve-banner" style="display:none">
+        <i class="fa-solid fa-circle-check"></i>
+        <span>This item has been marked as <strong>resolved</strong>.</span>
+      </div>
+      <div class="chat-window" id="chatWindow">
+        <div class="chat-empty"><i class="fa-regular fa-comments"></i><span>No messages yet. Say hello!</span></div>
+      </div>
+      <div class="chat-input-row" id="chatInputRow">
+        <input class="chat-input" id="chatInput" placeholder="Type a message…" onkeydown="if(event.key==='Enter')sendChatMsg()">
+        <button class="chat-send-btn" onclick="sendChatMsg()"><i class="fa-solid fa-paper-plane"></i></button>
+      </div>
+      <div id="chatActions" style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MY CHATS LIST -->
+<div class="modal-overlay" id="myChatsModal" onclick="handleOverlayClick(event,'myChatsModal')">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <h3>My Conversations</h3>
+      <button class="modal-close" onclick="closeModal('myChatsModal')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="modal-body" id="myChatsBody" style="padding:12px"></div>
+  </div>
+</div>
+
+<!-- CONFIRM -->
+<div class="modal-overlay" id="confirmModal" onclick="handleOverlayClick(event,'confirmModal')">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-body" id="confirmBody"></div>
+  </div>
+</div>
+
+<!-- LOGOUT MENU -->
+<div class="modal-overlay" id="logoutModal" onclick="handleOverlayClick(event,'logoutModal')" style="align-items:flex-start;justify-content:flex-end;padding:80px 2rem 0">
+  <div class="modal" style="max-width:200px;margin:0">
+    <div class="modal-body" style="padding:8px">
+      <button class="filter-chip" style="width:100%" onclick="doLogout()"><i class="fa-solid fa-right-from-bracket"></i>Sign Out</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"><i class="fa-solid fa-circle-check"></i><span id="toastMsg"></span></div>
+
+<script>
+// ─── DATA ───────────────────────────────────────────────────────────
+const catIcons = { electronics:'💻', accessories:'⌚', documents:'🪪', bags:'👜', keys:'🔑', pets:'🐾', other:'📦' };
+
+let users = [
+  { id:'u1', name:'Alice Johnson', email:'alice@demo.com', password:'demo123' },
+  { id:'u2', name:'Bob Martinez',  email:'bob@demo.com',  password:'demo123' }
+];
+
+let items = [
+  { id:'i1', type:'lost', title:'Black Leather Wallet', category:'accessories', desc:'Black leather bifold with a scratch on the front. Contains ID and bus pass.', location:'Central Park, near Fountain', date:'2026-05-24', photo:null, ownerId:'u1', resolved:false },
+  { id:'i2', type:'found', title:'iPhone 15 (Blue)', category:'electronics', desc:'Found a blue iPhone 15 with cracked screen protector. Yellow phone case.', location:'Green Line Metro, Car 3', date:'2026-05-25', photo:null, ownerId:'u2', resolved:false },
+  { id:'i3', type:'lost', title:'House & Car Keys', category:'keys', desc:'Bundle of 4 keys with a red bear keychain. Very sentimental.', location:'Riverside Mall, Food Court', date:'2026-05-22', photo:null, ownerId:'u1', resolved:false },
+  { id:'i4', type:'found', title:'Tan Canvas Backpack', category:'bags', desc:'Medium tan backpack with notebooks inside. Name tag: "M. Rivera".', location:'City Library, 2nd Floor', date:'2026-05-26', photo:null, ownerId:'u2', resolved:false },
+  { id:'i5', type:'lost', title:'Golden Retriever – Max', category:'pets', desc:'Male golden retriever, 3 yrs, blue collar. Responds to Max. Very friendly.', location:'Elmwood Dog Park', date:'2026-05-27', photo:null, ownerId:'u1', resolved:false },
+  { id:'i6', type:'found', title:'Passport (Indian)', category:'documents', desc:'Found Indian passport near bus terminal. Will hand to authorities if unclaimed.', location:'Downtown Bus Terminal', date:'2026-05-26', photo:null, ownerId:'u2', resolved:false }
+];
+
+// chats: { [chatKey]: [ {from, text, ts} ] }
+let chats = {};
+
+let currentUser = null;
+let filters = { status:'all', category:'all', mine:'no' };
+let searchQuery = '';
+let selectedType = 'lost';
+let uploadedPhotos = [];
+let sortMode = 'newest';
+let activeChatItemId = null;
+
+// ─── AUTH ────────────────────────────────────────────────────────────
+function switchAuthTab(tab) {
+  document.getElementById('tabLogin').classList.toggle('active', tab==='login');
+  document.getElementById('tabRegister').classList.toggle('active', tab==='register');
+  document.getElementById('loginForm').style.display = tab==='login' ? 'flex' : 'none';
+  document.getElementById('registerForm').style.display = tab==='register' ? 'flex' : 'none';
+}
+function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+  const pass  = document.getElementById('loginPass').value;
+  const user  = users.find(u => u.email===email && u.password===pass);
+  if (!user) { showAuthErr('loginErr','Invalid email or password.'); return; }
+  loginAs(user);
+}
+function doRegister() {
+  const name  = document.getElementById('regName').value.trim();
+  const email = document.getElementById('regEmail').value.trim().toLowerCase();
+  const pass  = document.getElementById('regPass').value;
+  if (!name || !email || !pass) { showAuthErr('registerErr','Please fill all fields.'); return; }
+  if (pass.length < 6)          { showAuthErr('registerErr','Password must be 6+ characters.'); return; }
+  if (users.find(u=>u.email===email)) { showAuthErr('registerErr','Email already registered.'); return; }
+  const nu = { id:'u'+Date.now(), name, email, password:pass };
+  users.push(nu);
+  loginAs(nu);
+}
+function quickLogin(email, pass) {
+  document.getElementById('loginEmail').value = email;
+  document.getElementById('loginPass').value  = pass;
+  doLogin();
+}
+function loginAs(user) {
+  currentUser = user;
+  document.getElementById('authScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('navUsername').textContent = user.name.split(' ')[0];
+  document.getElementById('navAvatar').textContent = user.name.charAt(0).toUpperCase();
+  document.getElementById('itemDate').value = new Date().toISOString().split('T')[0];
+  render();
+  refreshUnreadDot();
+}
+function doLogout() {
+  currentUser = null;
+  closeModal('logoutModal');
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('authScreen').style.display = 'flex';
+  document.getElementById('loginEmail').value = '';
+  document.getElementById('loginPass').value  = '';
+}
+function showAuthErr(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg; el.style.display = 'block';
+  setTimeout(() => el.style.display='none', 3000);
+}
+function showLogoutMenu() { openModal('logoutModal'); }
+
+// ─── RENDER ──────────────────────────────────────────────────────────
+function getFiltered() {
+  return items.filter(item => {
+    if (filters.mine === 'mine' && item.ownerId !== currentUser.id) return false;
+    const matchStatus = filters.status==='all' || item.type===filters.status;
+    const matchCat    = filters.category==='all' || item.category===filters.category;
+    const q = searchQuery.toLowerCase();
+    const matchSearch = !q || item.title.toLowerCase().includes(q) ||
+      item.desc.toLowerCase().includes(q) || item.location.toLowerCase().includes(q);
+    return matchStatus && matchCat && matchSearch;
+  });
+}
+function sortList(list) {
+  if (sortMode==='newest') return [...list].sort((a,b)=>b.id>a.id?1:-1);
+  if (sortMode==='oldest') return [...list].sort((a,b)=>a.id>b.id?1:-1);
+  if (sortMode==='az')     return [...list].sort((a,b)=>a.title.localeCompare(b.title));
+  return list;
+}
+function render() {
+  if (!currentUser) return;
+  const filtered = sortList(getFiltered());
+  const grid = document.getElementById('itemsGrid');
+  grid.innerHTML = '';
+  const lost  = items.filter(i=>i.type==='lost').length;
+  const found = items.filter(i=>i.type==='found').length;
+  document.getElementById('statLost').textContent  = lost;
+  document.getElementById('statFound').textContent = found;
+  document.getElementById('statTotal').textContent = items.length;
+  document.getElementById('countAll').textContent  = items.length;
+  document.getElementById('countLost').textContent = lost;
+  document.getElementById('countFound').textContent= found;
+  document.getElementById('countLabel').textContent = filtered.length+' item'+(filtered.length!==1?'s':'');
+  if (!filtered.length) {
+    grid.innerHTML = `<div class="empty-state"><i class="fa-solid fa-box-open"></i><p>No items match your filters.</p></div>`;
+    return;
+  }
+  filtered.forEach((item, idx) => {
+    const card = document.createElement('div');
+    card.className = 'item-card'+(item.resolved?' item-resolved':'');
+    card.style.animationDelay=(idx*0.04)+'s';
+    if (item.resolved) card.style.opacity='0.55';
+    const imgEl = item.photo
+      ? `<img class="card-img" src="${item.photo}" alt="${item.title}">`
+      : `<div class="card-img-placeholder">${catIcons[item.category]||'📦'}</div>`;
+    const dateStr = item.date ? new Date(item.date).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
+    const isMine = item.ownerId === currentUser.id;
+    const resolvedBadge = item.resolved ? `<span style="font-size:0.7rem;background:#eaf3de;color:#3B6D11;padding:2px 8px;border-radius:100px;font-weight:600">✓ Resolved</span>` : '';
+    card.innerHTML = `
+      ${imgEl}
+      <div class="card-body">
+        <div class="card-meta">
+          <span class="card-status status-${item.type}">${item.type==='lost'?'⚠ Lost':'✓ Found'}</span>
+          <span class="card-date">${dateStr}</span>
+        </div>
+        <div class="card-title">${item.title}</div>
+        <div class="card-desc">${item.desc}</div>
+        <div class="card-footer">
+          <span class="card-location"><i class="fa-solid fa-location-dot"></i> ${item.location}</span>
+          ${isMine ? '<span class="card-mine-badge">My post</span>' : resolvedBadge}
+        </div>
+      </div>`;
+    card.addEventListener('click', () => openDetail(item));
+    grid.appendChild(card);
+  });
+}
+
+// ─── DETAIL ──────────────────────────────────────────────────────────
+function openDetail(item) {
+  closeModal('chatModal');
+  document.getElementById('detailTitle').textContent = item.title;
+  const dateStr = item.date ? new Date(item.date).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}) : 'Unknown';
+  const imgEl = item.photo
+    ? `<img class="detail-img" src="${item.photo}" alt="${item.title}">`
+    : `<div class="detail-img-placeholder">${catIcons[item.category]||'📦'}</div>`;
+  const owner   = users.find(u=>u.id===item.ownerId);
+  const isMine  = item.ownerId === currentUser.id;
+  const resolvedHtml = item.resolved
+    ? `<div class="resolve-banner"><i class="fa-solid fa-circle-check"></i><span>This item has been <strong>resolved</strong> and is no longer active.</span></div>` : '';
+
+  let actionsHtml = `<div class="detail-actions">`;
+  if (!isMine && !item.resolved) {
+    actionsHtml += `<button class="btn btn-ghost" onclick="openChatFromDetail('${item.id}')"><i class="fa-solid fa-comments"></i>Chat with ${item.type==='lost'?'owner':'finder'}</button>`;
+  }
+  if (isMine || isInvolvedInChat(item.id)) {
+    if (!item.resolved) {
+      actionsHtml += `<button class="btn btn-teal" onclick="confirmResolve('${item.id}')"><i class="fa-solid fa-check-double"></i>Mark Resolved</button>`;
+    }
+    actionsHtml += `<button class="btn btn-danger" onclick="confirmDelete('${item.id}')"><i class="fa-solid fa-trash"></i>Remove Item</button>`;
+  }
+  actionsHtml += `</div>`;
+
+  document.getElementById('detailBody').innerHTML = `
+    ${resolvedHtml}
+    ${imgEl}
+    <div class="detail-tags">
+      <span class="detail-tag card-status status-${item.type}" style="border-radius:100px">${item.type==='lost'?'⚠ Lost':'✓ Found'}</span>
+      <span class="detail-tag"><i class="fa-solid fa-tag"></i>${item.category.charAt(0).toUpperCase()+item.category.slice(1)}</span>
+      <span class="detail-tag"><i class="fa-solid fa-calendar"></i>${dateStr}</span>
+      <span class="detail-tag"><i class="fa-solid fa-user"></i>${owner?owner.name:'Unknown'}</span>
+    </div>
+    <div class="detail-section"><div class="detail-section-label">Description</div><p>${item.desc}</p></div>
+    <div class="detail-section"><div class="detail-section-label">Location</div><p><i class="fa-solid fa-location-dot" style="color:var(--accent);margin-right:6px"></i>${item.location}</p></div>
+    ${actionsHtml}`;
+  openModal('detailModal');
+}
+
+function isInvolvedInChat(itemId) {
+  const chatKey = getChatKey(itemId);
+  return chatKey && chats[chatKey] && chats[chatKey].length > 0 &&
+    chats[chatKey].some(m => m.from === currentUser.id);
+}
+function getChatKey(itemId) { return 'chat_'+itemId; }
+
+// ─── CHAT ─────────────────────────────────────────────────────────────
+function openChatFromDetail(itemId) {
+  closeModal('detailModal');
+  openChat(itemId);
+}
+
+function openChat(itemId) {
+  const item  = items.find(i=>i.id===itemId);
+  const owner = users.find(u=>u.id===item.ownerId);
+  activeChatItemId = itemId;
+
+  // thumb
+  const thumb = document.getElementById('chatThumb');
+  if (item.photo) { thumb.innerHTML=`<img src="${item.photo}">`; }
+  else { thumb.textContent = catIcons[item.category]||'📦'; thumb.style.fontSize='1.4rem'; }
+
+  document.getElementById('chatItemTitle').textContent = item.title;
+  const isMine = item.ownerId===currentUser.id;
+  document.getElementById('chatWith').textContent = isMine ? 'Your post' : `Posted by ${owner?owner.name:'Unknown'}`;
+
+  renderChatWindow(itemId);
+
+  // actions
+  const actBox = document.getElementById('chatActions');
+  actBox.innerHTML = '';
+  const canResolve = !item.resolved && (isMine || isInvolvedInChat(itemId));
+  if (canResolve) {
+    const rb = document.createElement('button');
+    rb.className='btn btn-teal'; rb.innerHTML='<i class="fa-solid fa-check-double"></i>Mark Resolved';
+    rb.onclick=()=>confirmResolve(itemId); actBox.appendChild(rb);
+  }
+  const canDelete = isMine || isInvolvedInChat(itemId);
+  if (canDelete) {
+    const db = document.createElement('button');
+    db.className='btn btn-danger'; db.innerHTML='<i class="fa-solid fa-trash"></i>Remove Item';
+    db.onclick=()=>confirmDelete(itemId); actBox.appendChild(db);
+  }
+
+  // resolve banner
+  document.getElementById('resolveBanner').style.display = item.resolved ? 'flex' : 'none';
+  document.getElementById('chatInputRow').style.display  = item.resolved ? 'none' : 'flex';
+
+  openModal('chatModal');
+  markRead(itemId);
+  refreshUnreadDot();
+  setTimeout(()=>{ const w=document.getElementById('chatWindow'); w.scrollTop=w.scrollHeight; },100);
+}
+
+function renderChatWindow(itemId) {
+  const chatKey = getChatKey(itemId);
+  const msgs    = chats[chatKey] || [];
+  const win     = document.getElementById('chatWindow');
+  if (!msgs.length) {
+    win.innerHTML=`<div class="chat-empty"><i class="fa-regular fa-comments"></i><span>No messages yet — say hello!</span></div>`;
+    return;
+  }
+  win.innerHTML = msgs.map(m => {
+    const isMine = m.from===currentUser.id;
+    const sender = users.find(u=>u.id===m.from);
+    const initials = sender ? sender.name.charAt(0).toUpperCase() : '?';
+    const time = new Date(m.ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    return `<div class="msg-row${isMine?' mine':''}">
+      <div class="msg-avatar${isMine?'':' other'}">${initials}</div>
+      <div>
+        ${!isMine?`<div class="msg-sender">${sender?sender.name:'Unknown'}</div>`:''}
+        <div class="msg-bubble">${escHtml(m.text)}</div>
+        <div class="msg-time">${time}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function sendChatMsg() {
+  const input = document.getElementById('chatInput');
+  const text  = input.value.trim();
+  if (!text || !activeChatItemId) return;
+  const item = items.find(i=>i.id===activeChatItemId);
+  if (item && item.resolved) return;
+  const chatKey = getChatKey(activeChatItemId);
+  if (!chats[chatKey]) chats[chatKey] = [];
+  chats[chatKey].push({ from:currentUser.id, text, ts:Date.now() });
+  input.value = '';
+  renderChatWindow(activeChatItemId);
+  const w = document.getElementById('chatWindow');
+  w.scrollTop = w.scrollHeight;
+  // mark as having new message for the other party
+  flagUnread(activeChatItemId);
+  refreshUnreadDot();
+}
+
+// Unread tracking (simple: any chat where last msg is NOT from currentUser)
+let readMap = {}; // {chatKey: lastReadTs}
+function flagUnread(itemId) { /* messages already stored, unread computed dynamically */ }
+function markRead(itemId) { const k=getChatKey(itemId); const msgs=chats[k]||[]; readMap[k]=msgs.length?msgs[msgs.length-1].ts:0; }
+function hasUnread() {
+  for (const k of Object.keys(chats)) {
+    const msgs=chats[k]; if (!msgs||!msgs.length) continue;
+    const last=msgs[msgs.length-1];
+    if (last.from!==currentUser.id && (readMap[k]||0)<last.ts) return true;
+  }
+  return false;
+}
+function refreshUnreadDot() {
+  document.getElementById('unreadDot').classList.toggle('show', hasUnread());
+}
+
+function openMyChats() {
+  const body = document.getElementById('myChatsBody');
+  const myChats = Object.entries(chats).filter(([k,msgs])=>
+    msgs.some(m=>m.from===currentUser.id)
+  );
+  if (!myChats.length) {
+    body.innerHTML=`<div class="chat-empty" style="padding:32px 0"><i class="fa-regular fa-comments"></i><span>No conversations yet.</span></div>`;
+  } else {
+    body.innerHTML = myChats.map(([k,msgs])=>{
+      const itemId = k.replace('chat_','');
+      const item   = items.find(i=>i.id===itemId);
+      if (!item) return '';
+      const last = msgs[msgs.length-1];
+      const lastSender = users.find(u=>u.id===last.from);
+      const unread = last.from!==currentUser.id && (readMap[k]||0)<last.ts;
+      const time   = new Date(last.ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+      return `<div style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:var(--radius-md);cursor:pointer;transition:background 0.15s;${unread?'background:var(--accent-light);':''}" onmouseover="this.style.background='var(--paper-warm)'" onmouseout="this.style.background='${unread?'var(--accent-light)':'transparent'}'" onclick="closeModal('myChatsModal');openChat('${itemId}')">
+        <div style="font-size:1.8rem">${catIcons[item.category]||'📦'}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:0.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${item.title}</div>
+          <div style="font-size:0.78rem;color:var(--ink-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${lastSender?lastSender.name+': ':''}"${last.text}"</div>
+        </div>
+        <div style="font-size:0.72rem;color:var(--ink-faint);white-space:nowrap">${time}${unread?'<span style="display:inline-block;width:7px;height:7px;background:#e24b4a;border-radius:50%;margin-left:5px;vertical-align:middle"></span>':''}</div>
+      </div>`;
+    }).join('');
+  }
+  markRead(activeChatItemId);
+  refreshUnreadDot();
+  openModal('myChatsModal');
+}
+
+// ─── RESOLVE / DELETE ────────────────────────────────────────────────
+function confirmResolve(itemId) {
+  const item = items.find(i=>i.id===itemId);
+  document.getElementById('confirmBody').innerHTML = `
+    <div class="confirm-box">
+      <i class="fa-solid fa-circle-check" style="color:#3B6D11"></i>
+      <h4>Mark as Resolved?</h4>
+      <p>Marking "<strong>${item.title}</strong>" as resolved means the item has been returned to its owner. It will remain visible but inactive.</p>
+      <div class="confirm-actions">
+        <button class="btn btn-ghost" onclick="closeModal('confirmModal')">Cancel</button>
+        <button class="btn btn-teal" onclick="doResolve('${itemId}')"><i class="fa-solid fa-check-double"></i>Yes, Resolved</button>
+      </div>
+    </div>`;
+  closeModal('detailModal'); closeModal('chatModal');
+  openModal('confirmModal');
+}
+function doResolve(itemId) {
+  const item = items.find(i=>i.id===itemId);
+  if (item) item.resolved = true;
+  closeModal('confirmModal');
+  render();
+  showToast('Item marked as resolved!', false);
+}
+
+function confirmDelete(itemId) {
+  const item = items.find(i=>i.id===itemId);
+  document.getElementById('confirmBody').innerHTML = `
+    <div class="confirm-box">
+      <i class="fa-solid fa-triangle-exclamation" style="color:#a32d2d"></i>
+      <h4>Remove this item?</h4>
+      <p>This will permanently remove "<strong>${item.title}</strong>" from the board. This cannot be undone.</p>
+      <div class="confirm-actions">
+        <button class="btn btn-ghost" onclick="closeModal('confirmModal')">Cancel</button>
+        <button class="btn btn-danger" onclick="doDelete('${itemId}')"><i class="fa-solid fa-trash"></i>Yes, Remove</button>
+      </div>
+    </div>`;
+  closeModal('detailModal'); closeModal('chatModal');
+  openModal('confirmModal');
+}
+function doDelete(itemId) {
+  items = items.filter(i=>i.id!==itemId);
+  delete chats[getChatKey(itemId)];
+  closeModal('confirmModal');
+  render();
+  showToast('Item removed from the board.', false);
+}
+
+// ─── FILTERS / SORT ──────────────────────────────────────────────────
+function setFilter(type, value, el) {
+  if (type==='mine') {
+    const isActive = filters.mine==='mine';
+    filters.mine = isActive ? 'no' : 'mine';
+    el.classList.toggle('active', filters.mine==='mine');
+  } else {
+    filters[type] = value;
+    const group = el.closest('.filter-group');
+    group.querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('active'));
+    el.classList.add('active');
+  }
+  render();
+}
+function handleSearch(val) { searchQuery=val; render(); }
+function sortItems(val) { sortMode=val; render(); }
+
+// ─── UPLOAD ──────────────────────────────────────────────────────────
+function selectType(t) {
+  selectedType = t;
+  document.getElementById('typeLost').className ='type-btn'+(t==='lost'?' active-lost':'');
+  document.getElementById('typeFound').className='type-btn'+(t==='found'?' active-found':'');
+}
+function handlePhotoSelect(e) {
+  const files=Array.from(e.target.files);
+  uploadedPhotos=[];
+  const preview=document.getElementById('uploadPreview');
+  preview.innerHTML='';
+  files.slice(0,3).forEach(file=>{
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      uploadedPhotos.push(ev.target.result);
+      const img=document.createElement('img');
+      img.className='preview-thumb'; img.src=ev.target.result;
+      preview.appendChild(img);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+function submitItem() {
+  const name    = document.getElementById('itemName').value.trim();
+  const cat     = document.getElementById('itemCategory').value;
+  const desc    = document.getElementById('itemDesc').value.trim();
+  const loc     = document.getElementById('itemLocation').value.trim();
+  const date    = document.getElementById('itemDate').value;
+  if (!name||!cat||!desc||!loc) { showToast('Please fill all required fields.', true); return; }
+  items.unshift({
+    id:'i'+Date.now(), type:selectedType, title:name, category:cat, desc,
+    location:loc, date: date||new Date().toISOString().split('T')[0],
+    photo:uploadedPhotos[0]||null, ownerId:currentUser.id, resolved:false
+  });
+  closeModal('uploadModal');
+  resetForm();
+  render();
+  showToast('Item reported successfully!', false);
+}
+function resetForm() {
+  ['itemName','itemDesc','itemLocation','itemDate'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('itemCategory').value='';
+  document.getElementById('uploadPreview').innerHTML='';
+  uploadedPhotos=[]; selectType('lost');
+}
+
+// ─── MODAL HELPERS ───────────────────────────────────────────────────
+function openModal(id) { document.getElementById(id).classList.add('open'); document.body.style.overflow='hidden'; }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); if(!document.querySelector('.modal-overlay.open')) document.body.style.overflow=''; }
+function handleOverlayClick(e,id) { if(e.target.classList.contains('modal-overlay')) closeModal(id); }
+
+// ─── TOAST ───────────────────────────────────────────────────────────
+function showToast(msg, isErr) {
+  const t=document.getElementById('toast');
+  t.querySelector('i').className=isErr?'fa-solid fa-triangle-exclamation':'fa-solid fa-circle-check';
+  t.querySelector('i').style.color=isErr?'#f09070':'#5DC5A5';
+  document.getElementById('toastMsg').textContent=msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ─── DRAG & DROP ─────────────────────────────────────────────────────
+const ua=document.getElementById('uploadArea');
+ua.addEventListener('dragover',e=>{e.preventDefault();ua.classList.add('drag-over');});
+ua.addEventListener('dragleave',()=>ua.classList.remove('drag-over'));
+ua.addEventListener('drop',e=>{e.preventDefault();ua.classList.remove('drag-over');});
+</script>
+</body>
+</html>
